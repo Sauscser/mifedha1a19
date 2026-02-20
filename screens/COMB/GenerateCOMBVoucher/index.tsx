@@ -181,33 +181,15 @@ const VoucherCartCard = ({
     <View style={styles.voucherCard}>
       <Text style={{
       fontWeight: 'bold'
-    }}>{item.sokoname}</Text>
-      <Text>{item.itemBrand}</Text>
+    }}>{item.sokoname} || {item.itemBrand}</Text>
       <View style={{ marginVertical: 4 }}>
-        <Text style={{ fontSize: 12 }}>🏪 Seller: {formatAmountSync(priceNum * quantity, sellerCode, ratesMap || undefined)}</Text>
-        <Text style={{ fontSize: 12 }}>💳 Funder: {formatAmountSync(priceNum * quantity, funderCode, ratesMap || undefined)}</Text>
+        <Text style={{ fontSize: 12 }}> Seller: {formatAmountSync(priceNum * quantity, sellerCode, ratesMap || undefined )} || Funder: {formatAmountSync(priceNum * quantity, funderCode, ratesMap || undefined)}
+        </Text>
       </View>
       {alert && parent && (
         <View style={{ marginTop: 6 }}>
-          <Text>Seller Avg: {formatAmountSync(alert.avgItemPrice, sellerCode, ratesMap || undefined)}</Text>
-          <Text style={{
-            color: Math.abs(alert.itemDeviation) > (parent.marketConsumptionPrice ?? 0) ? '#f44336' : '#4caf50'
-          }}>
-            Seller Deviation: {alert.itemDeviation.toFixed(2)}% | Policy Margin: {parent.marketConsumptionPrice}%
-          </Text>
-
-          <Text>Market Avg (All Sellers): {formatAmountSync(alert.avgCategoryPrice, sellerCode, ratesMap || undefined)}</Text>
-          <Text style={{
-            color: Math.abs(alert.categoryDeviation) > (parent.marketConsumptionFrequency ?? 0) ? '#f44336' : '#4caf50'
-          }}>
-            MiFedha Market Deviation: {alert.categoryDeviation.toFixed(2)}% | Policy Frequency: {parent.marketConsumptionFrequency}%
-          </Text>
-
-          <Text style={{
-            color: Math.abs(alert.generalPriceDev) > (parent.marketConsumptionTotal ?? 0) ? '#f44336' : '#4caf50'
-          }}>
-            Reference Price Deviation: {alert.generalPriceDev.toFixed(2)}% | Policy Total: {parent.marketConsumptionTotal}%
-          </Text>
+          
+       
         </View>
       )}
       <View style={{
@@ -301,6 +283,9 @@ const SellerConsumablesVoucherScreen = () => {
             }
           }
         });
+        console.log (sellerID)
+        console.log(combContractID)
+        console.log(sellerNationality)
         setAllItems(res?.data?.listSokoAds?.items || []);
       } catch (err) {
         handleError('Could not load items.', err);
@@ -563,7 +548,38 @@ const SellerConsumablesVoucherScreen = () => {
               referencePrice: alert.categoryDeviation,
               generalPriceDev: alert.generalPriceDev,
               accStatus: 'Pending',
-              voucherLastUpdate: Date.now()
+              voucherLastUpdate: Date.now(),
+      
+              consumerContact: parent.consumerContact,
+              funderContact: parent.funderContact,
+              sellerContact: parent.sellerContact,
+              consumerType: parent.consumerType,
+              sellerType: parent.sellerType,
+              funderType: parent.funderType,
+              updateFrequency: parent.updateFrequency,
+              sellerName: parent.sellerName,
+              consumerName: parent.consumerName,
+              funderName: parent.funderName,
+              sellerOfficerName: parent.sellerOfficerName,
+              consumerOfficerName: parent.consumerOfficerName,
+              funderOfficerName: parent.funderOfficerName,
+              marketConsumptionPrice: parent.marketConsumptionPrice,
+              marketConsumptionFrequency: parent.marketConsumptionFrequency,
+              marketConsumptionTotal: parent.marketConsumptionTotal,
+             
+              consumptionCapping: isActiveCap
+                ? Number(parent.consumptionCapping) - Number(v.item.sokoprice) * Number(v.quantity)
+                : 0,
+              consumptionMarginStatus: parent.consumptionMarginStatus,
+              consumptionMargin: alert.itemDeviation,
+              referencePriceSource: 'Market Data',
+              priceFlag: alert.priceFlag,
+              marketConsumptionStatus: 'Approved',
+              lastUpdateTime: new Date().toISOString(),
+              settlementTime: parent.settlementTime,
+              prepostPay: parent.prepostPay,
+              repaymentPeriod: parent.repaymentPeriod,
+              advertStatus: 'Active',
             }
           }
         });
@@ -709,17 +725,11 @@ const SellerConsumablesVoucherScreen = () => {
             marginTop: 4,
             fontWeight: 'bold'
           }}>
-                  Remaining Funds:
+                  Remaining Funds: Consumer: {formatAmountSync(Number(getRemainingFunds() || 0), nationalityToCode(consumerNationality || nationality), ratesMap || undefined)} ||                   Funder: {formatAmountSync(Number(getRemainingFunds() || 0), nationalityToCode(funderNationality || nationality), ratesMap || undefined)}
+
                 </Text>
-                <Text style={{ textAlign: 'center', fontSize: 12 }}>
-                  🏪 Seller: {formatAmountSync(Number(getRemainingFunds() || 0), nationalityToCode(sellerNationality || nationality), ratesMap || undefined)}
-                </Text>
-                <Text style={{ textAlign: 'center', fontSize: 12 }}>
-                  🛒 Consumer: {formatAmountSync(Number(getRemainingFunds() || 0), nationalityToCode(consumerNationality || nationality), ratesMap || undefined)}
-                </Text>
-                <Text style={{ textAlign: 'center', fontSize: 12 }}>
-                  💳 Funder: {formatAmountSync(Number(getRemainingFunds() || 0), nationalityToCode(funderNationality || nationality), ratesMap || undefined)}
-                </Text>
+               
+               
               </>}
 
             {/* Generate Button */}
@@ -773,7 +783,8 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     marginRight: 10,
     width: 220,
-    backgroundColor: '#fafafa'
+    backgroundColor: '#fafafa',
+    marginBottom: 2
   },
   button: {
     padding: 12,

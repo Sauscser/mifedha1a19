@@ -1,7 +1,14 @@
 import { useNavigation } from '@react-navigation/native';
-import React from 'react';
 import { View, Text, Pressable } from 'react-native';
 import styles from './styles';
+
+import React, {useEffect, useState} from 'react';
+import { formatAmountSync } from '../../../../../src/utils/exchange';
+import { nationalityToCode } from '../../../../../src/utils/nationalityToCode';
+import {useExchange} from '../../../../../src/contexts/ExchangeContext';
+import { generateClient } from 'aws-amplify/api';  
+import { getSMAccount } from '../../../../../src/graphql/queries';
+import {fetchUserAttributes} from 'aws-amplify/auth';
 
 export interface ChmCvLnSttusRec {
   Loanee: {
@@ -63,6 +70,31 @@ const ChmCvLnSttsRec = (props: ChmCvLnSttusRec) => {
     navigation.navigate('RepyChmCovLns', { loanID });
   };
 
+const client = generateClient();
+const [Uzer, setUzer] = useState<string>(null);
+const [userNationality, setUserNationality] = useState<string>(null);
+const userCode = nationalityToCode(userNationality);
+const {ratesMap} = useExchange();
+
+useEffect(() => {
+const fetchUserData = async () => {
+                        
+const user = await fetchUserAttributes();
+setUzer(user.email);
+try {
+const userData = await client.graphql({
+query: getSMAccount,
+variables: { awsemail: user.email },
+});
+setUserNationality(userData.data.getSMAccount.nationality);
+console.log('User Data:', userData);
+} catch (error) {
+console.error('Error fetching user data:', error);
+}
+};
+fetchUserData();
+}, [Uzer]);
+
   // ✅ Correct days elapsed calculation
   const now = Date.now(); // current timestamp in ms
   const daysElapsed = (now - crtnDate) / (1000 * 60 * 60 * 24); // ms → days
@@ -84,8 +116,8 @@ const ChmCvLnSttsRec = (props: ChmCvLnSttusRec) => {
           <Text style={styles.label}>Loan Id:</Text> {loanID}
         </Text>
         <Text style={styles.prodInfo}>
-          <Text style={styles.label}>Loan Balance with penalties:</Text> KES{' '}
-          {LonBal1.toFixed(2)}
+          <Text style={styles.label}>Loan Balance with penalties:</Text>{' '}
+          {formatAmountSync(Math.floor(LonBal1), userCode, ratesMap)}
         </Text>
       </Pressable>
 

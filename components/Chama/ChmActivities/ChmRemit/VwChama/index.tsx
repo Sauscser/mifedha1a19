@@ -1,10 +1,17 @@
-import React, { useState } from 'react';
 import { View, Text, Pressable, Alert, ActivityIndicator } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Communications from 'react-native-communications';
 import { useNavigation } from '@react-navigation/core';
+
+
+
+
+import React, {useEffect, useState} from 'react';
+import { formatAmountSync } from '../../../../../src/utils/exchange';
+import { nationalityToCode } from '../../../../../src/utils/nationalityToCode';
+import {useExchange} from '../../../../../src/contexts/ExchangeContext';
+import {fetchUserAttributes} from 'aws-amplify/auth';
 import { generateClient } from 'aws-amplify/api';
-import { fetchUserAttributes } from 'aws-amplify/auth';
 
 import {
   updateGroupNonLoans,
@@ -66,6 +73,35 @@ const ChmRemitInfo = ({ ChamaRemitDtls }: ChamaRemitInfo) => {
   const navigation = useNavigation();
   const [isLoading2, setIsLoading2] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+
+  const client = generateClient();
+  const [Uzer, setUzer] = useState<string>(null);
+  const [userNationality, setUserNationality] = useState<string>(null);
+  const userCode = nationalityToCode(userNationality);
+  const {ratesMap} = useExchange();
+                          
+                       
+                          
+                       
+  useEffect(() => {
+  const fetchUserData = async () => {
+                          
+  const user = await fetchUserAttributes();
+  setUzer(user.email);
+  try {
+  const userData = await client.graphql({
+  query: getSMAccount,
+  variables: { awsemail: user.email },
+  });
+  setUserNationality(userData.data.getSMAccount.nationality);
+  console.log('User Data:', userData);
+  } catch (error) {
+  console.error('Error fetching user data:', error);
+  }
+  };
+  fetchUserData();
+  }, [Uzer]);
+  
 
   // Signatory 2 confirmation
   const handleSignatory2 = async () => {
@@ -237,7 +273,7 @@ const ChmRemitInfo = ({ ChamaRemitDtls }: ChamaRemitInfo) => {
         }
       });
 
-      Alert.alert(`Amount KES ${amountSent.toFixed(2)} sent successfully!`);
+      Alert.alert(`Amount ${formatAmountSync(Math.floor(amountSent), userCode, ratesMap)} sent successfully!`);
       Communications.textWithoutEncoding(receiver.phonecontact, `Hi ${receiver.name}, ${group.grpName} has sent you KES ${amountSent}. Contact the group admin if unclear.`);
 
     } catch (error) {
@@ -254,7 +290,7 @@ const ChmRemitInfo = ({ ChamaRemitDtls }: ChamaRemitInfo) => {
       <View style={styles.card}>
         <Text style={styles.prodInfo}><Text style={styles.label}>Member Name: </Text>{receiverName}</Text>
         <Text style={styles.prodInfo}><Text style={styles.label}>Transaction ID: </Text>{id}</Text>
-        <Text style={styles.prodInfo}><Text style={styles.label}>Amount: </Text>KES {amountSent.toFixed(2)}</Text>
+        <Text style={styles.prodInfo}><Text style={styles.label}>Amount: </Text> {formatAmountSync((amountSent), userCode, ratesMap)}</Text>
         <Text style={styles.prodInfo}><Text style={styles.label}>Time Sent: </Text>{createdAt}</Text>
         <Text style={styles.prodInfo}><Text style={styles.label}>Signatory 1 confirmation: </Text>{confirm1}</Text>
         <Text style={styles.prodInfo}><Text style={styles.label}>Signatory 2 confirmation: </Text>{confirm2}</Text>

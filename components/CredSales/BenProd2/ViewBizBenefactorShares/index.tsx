@@ -1,11 +1,16 @@
 import { useNavigation } from '@react-navigation/native';
-import React, { useState } from 'react';
-import { generateClient } from 'aws-amplify/api';
-import { getCurrentUser, fetchUserAttributes } from 'aws-amplify/auth';
+
 import { View, Text, Pressable, Alert, ActivityIndicator } from 'react-native';
 import styles from './styles'; // adjust path as necessary
 import { updateBizna, updateLinkBeneficiary2 } from '../../../../src/graphql/mutations';
 import { getLinkBeneficiary2, getSMAccount } from '../../../../src/graphql/queries';
+
+import { generateClient } from 'aws-amplify/api';
+import { getCurrentUser, fetchUserAttributes } from 'aws-amplify/auth';
+import React, {useState, useEffect} from 'react';
+import { nationalityToCode } from '../../../../src/utils/nationalityToCode';
+import {useExchange} from '../../../../src/contexts/ExchangeContext';
+import { formatAmountSync } from '../../../../src/utils/exchange';
 
 export interface SMAccount {
   SMAc: {
@@ -46,6 +51,31 @@ const SMCvLnStts = ({ SMAc }: SMAccount) => {
 
   const navigation = useNavigation();
   const [isLoading, setIsLoading] = useState(false);
+
+const client = generateClient();
+const [Uzer, setUzer] = useState<string>(null);
+const [userNationality, setUserNationality] = useState<string>(null);
+const userCode = nationalityToCode(userNationality);
+const {ratesMap} = useExchange();
+
+useEffect(() => {
+const fetchUserData = async () => {
+                        
+const user = await fetchUserAttributes();
+setUzer(user.email);
+try {
+const userData = await client.graphql({
+query: getSMAccount,
+variables: { awsemail: user.email },
+});
+setUserNationality(userData.data.getSMAccount.nationality);
+console.log('User Data:', userData);
+} catch (error) {
+console.error('Error fetching user data:', error);
+}
+};
+fetchUserData();
+}, [Uzer]);   
 
   const VwBenefactorContriDtls = () => {
     navigation.navigate("VwBenefactorContriDtls", {
@@ -127,8 +157,8 @@ const SMCvLnStts = ({ SMAc }: SMAccount) => {
         <Text style={styles.prodInfo}><Text style={styles.label}>Beneficiary Phone:</Text> {beneficiaryPhone}</Text>
         <Text style={styles.prodInfo}><Text style={styles.label}>Status:</Text> {benefitStatus}</Text>
 
-        <Text style={styles.prodInfo}><Text style={styles.label}>Cost:</Text> KES {prodCost.toLocaleString()}</Text>
-        <Text style={styles.prodInfo}><Text style={styles.label}>Benefits Pooled:</Text> KES {benefitsAmount.toLocaleString()}</Text>
+        <Text style={styles.prodInfo}><Text style={styles.label}>Cost:</Text> {formatAmountSync(Math.floor(prodCost), userCode, ratesMap)}</Text>
+        <Text style={styles.prodInfo}><Text style={styles.label}>Benefits Pooled:</Text> {formatAmountSync(Math.floor(benefitsAmount), userCode, ratesMap)}</Text>
         <Text style={styles.prodDesc}>{prodDesc}</Text>
       </View>
 

@@ -10,6 +10,9 @@ import { getCurrentUser, fetchUserAttributes } from "aws-amplify/auth";
 import { generateClient } from "aws-amplify/api";
 import { useExchange } from '../../../../src/contexts/ExchangeContext';
 import { formatAmountSync } from '../../../../src/utils/exchange';
+import { convertForeignToKsh } from '../../../../src/utils/exchange';
+import {nationalityToCode} from '../../../../src/utils/nationalityToCode';
+
 const client = generateClient();
 const SMASendNonLns = props => {
   const [SenderNatId, setSenderNatId] = useState('');
@@ -22,18 +25,67 @@ const SMASendNonLns = props => {
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const route = useRoute();
   const navigation = useNavigation();
+
+  const {  } = useExchange();
+const userCode = nationalityToCode(nationality); // e.g. "UGX", "USD", "KES"
+
+
+
+
   const SndChmMmbrMny = () => {
     navigation.navigate("AutomaticRepayAllTyps");
   };
   const grpDsNtExst = () => {
     navigation.navigate("SendNLBnftNone");
   };
+
+const client = generateClient();
+
+
+  const [Uzer, setUzer] = useState<string | null>(null);
+  const [userNationality, setUserNationality] = useState<string | null>(null);
+
+
+  // Derive symbol safely
+  const currencySymbol = userNationality && ratesMap[userNationality]?.symbol || 'KSh';
+
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        const user = await fetchUserAttributes();
+        setUzer(user.email);
+
+        const userData: any = await client.graphql({
+          query: getSMAccount,
+          variables: { awsemail: user.email },
+        });
+
+        setUserNationality(userData.data.getSMAccount?.nationality || null);
+        console.log('User Data:', userData);
+      } catch (error) {
+        console.error('Error fetching user data:', error);
+      }
+    };
+
+    fetchUserData();
+  }, []);
+
+  
+
+
+
+
+ 
+
   const fetchCvLnSM = async () => {
     setIsLoading(true);
     const userInfo = await getCurrentUser();
     const attributes = await fetchUserAttributes();
+    const amountInKES = await convertForeignToKsh(Number(amounts), nationality);
+
     try {
       const Lonees1: any = await client.graphql({
+        
         query: listSMLoansCovereds,
         variables: {
           filter: {
@@ -99,6 +151,7 @@ const SMASendNonLns = props => {
                 }
                 setIsLoading(false);
                 try {
+                  
                   const accountDtl: any = await client.graphql({
                     query: getSMAccount,
                     variables: {
@@ -113,6 +166,8 @@ const SMASendNonLns = props => {
                   const loanLimits = accountDtl.data.getSMAccount.loanLimit;
                   const names = accountDtl.data.getSMAccount.name;
                   const owner = accountDtl.data.getSMAccount.owner;
+                  
+
                   const fetchCompDtls = async () => {
                     if (isLoading) {
                       return;
@@ -241,7 +296,7 @@ const SMASendNonLns = props => {
                                               input: {
                                                 recPhn: RecNatId,
                                                 senderPhn: attributes.email,
-                                                amount: parseFloat(amounts).toFixed(0),
+                                                amount: amountInKES,
                                                 description: Desc,
                                                 RecName: ReceiverName,
                                                 SenderName: names,
@@ -473,7 +528,7 @@ const SMASendNonLns = props => {
                                               input: {
                                                 recPhn: RecNatId,
                                                 senderPhn: attributes.email,
-                                                amount: parseFloat(amounts).toFixed(0),
+                                                amount: amountInKES,
                                                 description: Desc,
                                                 RecName: ReceiverName,
                                                 SenderName: names,
@@ -873,7 +928,7 @@ const SMASendNonLns = props => {
                       <TextInput placeholder="Receiver Email" value={RecNatId} onChangeText={setRecNatId} style={styles.input} editable={true}>                          
                         </TextInput>
 
-                        <TextInput placeholder="Amount" value={amounts} onChangeText={setAmount} style={styles.input} editable={true} keyboardType='decimal-pad'>                                                                         
+                        <TextInput placeholder = 'Amount' value={amounts} onChangeText={setAmount} style={styles.input} editable={true} keyboardType='decimal-pad'>                                                                         
                         </TextInput>   
 
                         <TextInput placeholder="Description" value={Desc} onChangeText={setDesc} style={styles.input} editable={true} multiline={true}>                                                                         

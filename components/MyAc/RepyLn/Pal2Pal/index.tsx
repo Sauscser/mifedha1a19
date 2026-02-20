@@ -1,7 +1,14 @@
 import { useNavigation } from '@react-navigation/core';
-import React from 'react';
-import {View, Text,  Pressable,  } from 'react-native';
+import React, {useEffect, useState} from 'react';
+import {View, Text, ImageBackground, Pressable, TextInput, ScrollView} from 'react-native';
 import styles from './styles';
+
+import { formatAmountSync } from '../../../../src/utils/exchange';
+import { nationalityToCode } from '../../../../src/utils/nationalityToCode';
+import {useExchange} from '../../../../src/contexts/ExchangeContext';
+import { getSMAccount } from '../../../../src/graphql/queries';
+import {fetchUserAttributes} from 'aws-amplify/auth';
+import { generateClient } from 'aws-amplify/api';
 
 
 export interface SMCvLnSttus {
@@ -52,6 +59,34 @@ const SMCvLnStts = (props:SMCvLnSttus) => {
        navigation.navigate("RpyPal2Pal", {loanID})
    }
 
+      const client = generateClient();
+                     const [Uzer, setUzer] = useState<string>(null);
+                     const [userNationality, setUserNationality] = useState<string>(null);
+                     const userCode = nationalityToCode(userNationality);
+                     const {ratesMap} = useExchange();
+                       
+                    
+                       
+                    
+                       useEffect(() => {
+                               const fetchUserData = async () => {
+                       
+                                   const user = await fetchUserAttributes();
+                                   setUzer(user.email);
+                                   try {
+                                       const userData = await client.graphql({
+                                           query: getSMAccount,
+                                           variables: { awsemail: user.email },
+                                       });
+                                       setUserNationality(userData.data.getSMAccount.nationality);
+                                       console.log('User Data:', userData);
+                                   } catch (error) {
+                                       console.error('Error fetching user data:', error);
+                                   }
+                               };
+                               fetchUserData();
+                           }, [Uzer]);
+
    const today = new Date();
               let hours = (today.getHours() < 10 ? '0' : '') + today.getHours();
               let minutes = (today.getMinutes() < 10 ? '0' : '') + today.getMinutes();
@@ -85,8 +120,8 @@ const SMCvLnStts = (props:SMCvLnSttus) => {
               const netLnBal2 = (netLnBal) * 
               ((Math.pow(1 + (interest)/36500, tmDif2)))
 
-              const LonBal1 = (netLnBal2 + (clearanceAmts) +  (DefaultPenaltySM2s)).toFixed(0)
-             
+              const LonBal12 = (netLnBal2 + (clearanceAmts) +  (DefaultPenaltySM2s)).toFixed(0)
+             const LonBal1 = parseFloat(LonBal12)
     return (
          <View style = {styles.pageContainer}>
         <Pressable 
@@ -97,7 +132,7 @@ const SMCvLnStts = (props:SMCvLnSttus) => {
 
             <Text style={styles.prodInfo}><Text style={styles.label}>Loaner Name:</Text> {loanername}</Text>           
            <Text style={styles.prodInfo}><Text style={styles.label}>Loan ID:</Text> {loanID}</Text>           
-           <Text style={styles.prodInfo}><Text style={styles.label}>Loan Balances:</Text> KES {parseFloat(LonBal1).toFixed(2)}</Text>
+           <Text style={styles.prodInfo}><Text style={styles.label}>Loan Balances:</Text> {formatAmountSync(LonBal1, userCode, ratesMap)}</Text>
 
                         
                     </Pressable>

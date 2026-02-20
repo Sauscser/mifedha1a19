@@ -29,6 +29,7 @@ const MyLoanAccount = props => {
   const VwPlLn2Remove = () => navigation.navigate('VwPlLn2Remove');
   const BoostPalBenefits = () => navigation.navigate('BoostPalBenefits');
   const ViewBiznaShareRec = () => navigation.navigate('ViewBiznaShareRec');
+  
   return <SafeAreaView style={{
     flex: 1
   }}>
@@ -36,9 +37,7 @@ const MyLoanAccount = props => {
       <View style={styles.adminImage}>
         {/* Main Container */}
         <View style={styles.clientsView}>
-          <Text style={styles.salesText}></Text>
 
-            <Text style={styles.salesPressableText}></Text>
           <View style={styles.viewForClientsPressables}>
             <LinearGradient colors={['#FF8C00', '#00BFFF']} start={{
               x: 0,
@@ -206,7 +205,7 @@ const MyLoanAccount = props => {
               y: 1
             }} style={styles.gradientPressable}>
               <Pressable onPress={ViewNonLnsSents}>
-                <Text style={styles.clientsPressableText}>View Cash sent to Pals/Transpoter</Text>
+                <Text style={styles.clientsPressableText}>View Cash sent to Pals or Transpoter</Text>
               </Pressable>
             </LinearGradient>
 
@@ -317,7 +316,7 @@ const MyLoanAccount = props => {
             
           </View>
 
-
+ 
 
         </View>
       </View>

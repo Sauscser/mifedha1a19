@@ -15,95 +15,52 @@ const AuditorVoucherCard = ({
   voucher,
   selected,
   toggleSelect,
-  sellerNationality,
   funderNationality,
-  consumerNationality,
-  auditorNationality
+  funderCurrency
 }: any) => {
-  const { nationality, ratesMap } = useExchange();
+  const { ratesMap } = useExchange();
   const [expanded, setExpanded] = useState(false);
   const policyExceeded = voucher.priceDeviation > voucher.marketConsumptionPrice || voucher.referencePrice > voucher.marketConsumptionFrequency || voucher.generalPriceDev > voucher.marketConsumptionTotal;
-  const auditorNat = auditorNationality || nationality;
-  const sellerNat = sellerNationality || nationality;
-  const funderNat = funderNationality || nationality;
-  const consumerNat = consumerNationality || nationality;
+  const funderNat = funderNationality || 'UNKNOWN';
+  const funderCurr = funderCurrency || 'UNKNOWN';
   const totalAmount = Number(voucher.itemPrice) * Number(voucher.numberOfItems);
-  
-  // Build unique currencies to display (auditor, seller, funder)
-  const currencies = [
-    { icon: '👤', label: 'Auditor', nat: auditorNat },
-    { icon: '🏪', label: 'Seller', nat: sellerNat },
-    { icon: '💳', label: 'Funder', nat: funderNat }
-  ];
-  
+
   return <TouchableOpacity onPress={() => setExpanded(!expanded)}>
-      <View style={[styles.voucherCard, {
+    <View style={[styles.voucherCard, {
       borderColor: selected ? 'darkblue' : '#ddd'
-    }]}>
-        <View style={{
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginBottom: 4
-      }}>
-          <TouchableOpacity onPress={() => toggleSelect(voucher.id)} style={{
-          width: 20,
-          height: 20,
-          borderWidth: 1,
-          borderColor: '#000',
-          marginRight: 8,
-          backgroundColor: selected ? 'darkblue' : 'white'
-        }} />
-          <Text style={styles.title}>
-            {voucher.itemName} ({voucher.itemBrand})
+    }]}> 
+      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
+        <TouchableOpacity onPress={() => toggleSelect(voucher.id)} style={{ width: 20, height: 20, borderWidth: 1, borderColor: '#000', marginRight: 8, backgroundColor: selected ? 'darkblue' : 'white' }} />
+        <Text style={styles.title}>{voucher.itemName} ({voucher.itemBrand})</Text>
+      </View>
+      <View style={{ backgroundColor: '#f9f9f9', padding: 6, borderRadius: 4, marginVertical: 4 }}>
+        <Text style={{ fontSize: 11, marginVertical: 2 }}>
+          💳 Funder ({funderNat}): {formatAmountSync(totalAmount, funderCurr, ratesMap)}
+        </Text>
+      </View>
+      <Text>Time Settled: {new Date(voucher.settlementTime).toLocaleString()}</Text>
+      {expanded && <>
+        <Text>Specifications: {voucher.itemSpecifications || '-'}</Text>
+        <View style={{ backgroundColor: '#f0f0f0', padding: 6, borderRadius: 4, marginVertical: 6 }}>
+          <Text style={{ fontSize: 11, fontWeight: 'bold' }}>Unit Price in Funder Currency:</Text>
+          <Text style={{ fontSize: 11, marginTop: 4 }}>
+            💳 Funder ({funderNat}): {formatAmountSync(Number(voucher.itemPrice), funderCurr, ratesMap)}
           </Text>
         </View>
-        <View style={{ backgroundColor: '#f9f9f9', padding: 6, borderRadius: 4, marginVertical: 4 }}>
-          {currencies.map((curr, idx) => (
-            <Text key={idx} style={{ fontSize: 11, marginVertical: 2 }}>
-              {curr.icon} {curr.label} ({curr.nat}): {formatAmountSync(totalAmount, nationalityToCode(curr.nat), ratesMap)}
-            </Text>
-          ))}
-        </View>
-        <Text>Time Settled: {new Date(voucher.settlementTime).toLocaleString()}</Text>
-
-        {expanded && <>
-            <Text>Specifications: {voucher.itemSpecifications || '-'}</Text>
-            <View style={{ backgroundColor: '#f0f0f0', padding: 6, borderRadius: 4, marginVertical: 6 }}>
-              <Text style={{ fontSize: 11, fontWeight: 'bold' }}>Unit Price in Different Currencies:</Text>
-              {currencies.map((curr, idx) => (
-                <Text key={idx} style={{ fontSize: 11, marginTop: 4 }}>
-                  {curr.icon} {curr.label} ({curr.nat}): {formatAmountSync(Number(voucher.itemPrice), nationalityToCode(curr.nat), ratesMap)}
-                </Text>
-              ))}
-            </View>
-            <Text>Number of Items: {voucher.numberOfItems}</Text>
-
-            <Text style={styles.section}>👤 Consumer ({consumerNat})</Text>
-            <Text>{voucher.consumerName} — {voucher.consumerAccount}</Text>
-
-            <Text style={styles.section}>🏪 Seller ({sellerNat})</Text>
-            <Text>{voucher.sellerName} — {voucher.sellerAccount}</Text>
-
-            <Text style={styles.section}>💳 Funder ({funderNat})</Text>
-            <Text>{voucher.funderName} — {voucher.funderAccount}</Text>
-
-            <Text style={styles.section}>Pricing Deviations</Text>
-            <Text>Seller Deviation: {voucher.priceDeviation}% | Policy: {voucher.marketConsumptionPrice}%</Text>
-            <Text>MiFedha Reference: {voucher.referencePrice}% | Policy: {voucher.marketConsumptionFrequency}%</Text>
-            <Text>General Market: {voucher.generalPriceDev}% | Policy: {voucher.marketConsumptionTotal}%</Text>
-
-            <Text style={{
-          color: policyExceeded ? 'red' : 'green',
-          fontWeight: 'bold',
-          marginTop: 4
-        }}>
-              Policy Status: {policyExceeded ? 'EXCEEDED POLICY' : 'WITHIN POLICY'}
-            </Text>
-          </>}
-      </View>
-    </TouchableOpacity>;
+        <Text>Number of Items: {voucher.numberOfItems}</Text>
+        <Text style={styles.section}>💳 Funder ({funderNat})</Text>
+        <Text>{voucher.funderName} — {voucher.funderAccount}</Text>
+        <Text style={styles.section}>Pricing Deviations</Text>
+        <Text>Seller Deviation: {voucher.priceDeviation}% | Policy: {voucher.marketConsumptionPrice}%</Text>
+        <Text>MiFedha Reference: {voucher.referencePrice}% | Policy: {voucher.marketConsumptionFrequency}%</Text>
+        <Text>General Market: {voucher.generalPriceDev}% | Policy: {voucher.marketConsumptionTotal}%</Text>
+        <Text style={{ color: policyExceeded ? 'red' : 'green', fontWeight: 'bold', marginTop: 4 }}>
+          Policy Status: {policyExceeded ? 'EXCEEDED POLICY' : 'WITHIN POLICY'}
+        </Text>
+      </>}
+    </View>
+  </TouchableOpacity>;
 };
-
 const MemoizedAuditorVoucherCard = React.memo(AuditorVoucherCard, (prevProps, nextProps) => {
   return prevProps.voucher.id === nextProps.voucher.id &&
          prevProps.selected === nextProps.selected &&
@@ -127,6 +84,7 @@ const AuditorVoucherScreen = () => {
   const [showEndPicker, setShowEndPicker] = useState(false);
   const [auditorVerified, setAuditorVerified] = useState(false);
   const [auditorNationality, setAuditorNationality] = useState<string | null>(null);
+  const [auditorOrganization, setAuditorOrganization] = useState<string | null>(null);
   const [selectedVouchers, setSelectedVouchers] = useState<Record<string, boolean>>({});
   const { nationality, ratesMap } = useExchange();
 
@@ -151,7 +109,7 @@ const AuditorVoucherScreen = () => {
         Alert.alert('Unauthorized', 'You are not registered as an auditor.');
         return;
       }
-      
+      setAuditorOrganization(auditor.organization || null);
       // Fetch auditor's nationality
       try {
         const smRes: any = await client.graphql({ query: getSMAccount, variables: { awsemail: email } });
@@ -160,7 +118,6 @@ const AuditorVoucherScreen = () => {
       } catch (e) {
         console.warn('Could not fetch auditor nationality', e);
       }
-      
       setAuditorVerified(true);
       fetchVouchers();
     } catch (error) {
@@ -188,17 +145,19 @@ const AuditorVoucherScreen = () => {
       // Fetch nationalities for all three parties (seller, funder, consumer)
       const fetchNationality = async (account: string, type: string) => {
         try {
-          // Check if type includes Biz (could be sellerTypeBiz, funderTypeBiz, consumerTypeBiz, etc.)
-          if (type === 'sellerTypeBiz' || type === 'funderTypeBiz' || type === 'consumerTypeBiz') {
+          // Bizna: account is Bizna account number, getBizna then getSMAccount(email)
+          if (type === 'sellerTypeBiz' || type === 'funderTypeBiz') {
             const bizRes: any = await client.graphql({ query: getBizna, variables: { BusKntct: account } });
             const email = bizRes?.data?.getBizna?.email;
             if (email) {
               const smRes: any = await client.graphql({ query: getSMAccount, variables: { awsemail: email } });
-              return smRes?.data?.getSMAccount?.nationality || null;
+              return smRes?.data?.getSMAccount?.nationality ;
             }
+            return null;
           } else {
+            // Pal: account is email
             const smRes: any = await client.graphql({ query: getSMAccount, variables: { awsemail: account } });
-            return smRes?.data?.getSMAccount?.nationality || null;
+            return smRes?.data?.getSMAccount?.nationality;
           }
         } catch (e) {
           console.warn(`Could not fetch nationality for ${account}`, e);
@@ -206,22 +165,36 @@ const AuditorVoucherScreen = () => {
         }
       };
       
-      const natMap = new Map<string, { seller: string | null; funder: string | null; consumer: string | null }>();
-      
       await Promise.all(items.map(async i => {
         const seller = await fetchNationality(i.sellerAccount, i.sellerType);
         const funder = await fetchNationality(i.funderAccount, i.funderType);
         const consumer = await fetchNationality(i.consumerAccount, i.consumerType);
-        natMap.set(i.id, { seller, funder, consumer });
+        // ...existing code...
       }));
-      
+      // Replace natMap/enriched logic
+      const natMapNew = new Map<string, { sellerNationality: string | null; funderNationality: string | null; funderCurrency: string; consumerNationality: string | null }>();
+      await Promise.all(items.map(async i => {
+        const sellerNationality = await fetchNationality(i.sellerAccount, i.sellerType);
+        const funderNationality = await fetchNationality(i.funderAccount, i.funderType);
+        // Consumer: always Pal
+        const smRes: any = await client.graphql({ query: getSMAccount, variables: { awsemail: i.consumerAccount } });
+        const consumerNationality = smRes?.data?.getSMAccount?.nationality || null;
+        const funderCurrency = nationalityToCode(funderNationality) || 'Ksh';
+        natMapNew.set(i.id, {
+          sellerNationality,
+          funderNationality,
+          funderCurrency,
+          consumerNationality
+        });
+      }));
       const enriched = items.map(i => {
-        const nats = natMap.get(i.id) || { seller: null, funder: null, consumer: null };
+        const nats = natMapNew.get(i.id) || { sellerNationality: null, funderNationality: null, funderCurrency: 'Ksh', consumerNationality: null };
         return {
           ...i,
-          sellerNationality: nats.seller,
-          funderNationality: nats.funder,
-          consumerNationality: nats.consumer
+          sellerNationality: nats.sellerNationality,
+          funderNationality: nats.funderNationality,
+          funderCurrency: nats.funderCurrency,
+          consumerNationality: nats.consumerNationality
         };
       });
       
@@ -244,7 +217,19 @@ const AuditorVoucherScreen = () => {
     ...prev,
     [id]: !prev[id]
   }));
-  const filteredVouchers = vouchers.filter(v => v.sellerAccount?.toLowerCase().includes(sellerFilter.toLowerCase()) && v.consumerAccount?.toLowerCase().includes(consumerFilter.toLowerCase()) && v.funderAccount?.toLowerCase().includes(funderFilter.toLowerCase()) && (!startDate || new Date(v.settlementTime) >= startDate) && (!endDate || new Date(v.settlementTime) <= endDate));
+  const filteredVouchers = vouchers.filter(v => {
+    // Only show vouchers where funderAccount matches auditor's organization
+    if (auditorOrganization && v.funderAccount !== auditorOrganization) {
+      return false;
+    }
+    return (
+      v.sellerAccount?.toLowerCase().includes(sellerFilter.toLowerCase()) &&
+      v.consumerAccount?.toLowerCase().includes(consumerFilter.toLowerCase()) &&
+      v.funderAccount?.toLowerCase().includes(funderFilter.toLowerCase()) &&
+      (!startDate || new Date(v.settlementTime) >= startDate) &&
+      (!endDate || new Date(v.settlementTime) <= endDate)
+    );
+  });
   // Group vouchers by seller nationality and compute per-currency summaries
   const groupedSummary = (() => {
     const map = new Map<string, {
@@ -479,12 +464,23 @@ const AuditorVoucherScreen = () => {
         textAlign: 'center'
       }}>No cleared vouchers found.</Text> : <FlatList data={filteredVouchers} keyExtractor={item => item.id} renderItem={({
         item
-      }) => <MemoizedAuditorVoucherCard voucher={item} selected={!!selectedVouchers[item.id]} toggleSelect={toggleSelect} sellerNationality={item.sellerNationality} funderNationality={item.funderNationality} consumerNationality={item.consumerNationality} auditorNationality={auditorNationality} />} onEndReached={() => {
+      }) => <MemoizedAuditorVoucherCard
+        voucher={item}
+        selected={!!selectedVouchers[item.id]}
+        toggleSelect={toggleSelect}
+        funderNationality={item.funderNationality}
+        funderCurrency={item.funderCurrency}
+      />}
+      onEndReached={() => {
         if (nextToken && !loading) fetchVouchers(nextToken);
-      }} onEndReachedThreshold={0.5} keyboardShouldPersistTaps="handled" />}
-      </View>
-    </KeyboardAvoidingView>;
+      }}
+      onEndReachedThreshold={0.5}
+      keyboardShouldPersistTaps="handled"
+      />}
+    </View>
+  </KeyboardAvoidingView>;
 };
+
 const styles = StyleSheet.create({
   voucherCard: {
     borderWidth: 1,

@@ -1,8 +1,15 @@
 import { useNavigation } from '@react-navigation/core';
-import React from 'react';
 import {View, Text,  ScrollView} from 'react-native';
 
 import styles from './styles';
+
+import React, {useEffect, useState} from 'react';
+import { formatAmountSync } from '../../../../../src/utils/exchange';
+import { nationalityToCode } from '../../../../../src/utils/nationalityToCode';
+import {useExchange} from '../../../../../src/contexts/ExchangeContext';
+import {fetchUserAttributes} from 'aws-amplify/auth';
+import { generateClient } from 'aws-amplify/api';  
+import { getSMAccount } from '../../../../../src/graphql/queries';
 
 
 export interface ChamaMmbrshpInfo {
@@ -61,6 +68,31 @@ const ChmMbrShpInfo = (props:ChamaMmbrshpInfo) => {
        
    }} = props ;
 
+const client = generateClient();
+const [Uzer, setUzer] = useState<string>(null);
+const [userNationality, setUserNationality] = useState<string>(null);
+const userCode = nationalityToCode(userNationality);
+const {ratesMap} = useExchange();
+
+useEffect(() => {
+const fetchUserData = async () => {
+                        
+const user = await fetchUserAttributes();
+setUzer(user.email);
+try {
+const userData = await client.graphql({
+query: getSMAccount,
+variables: { awsemail: user.email },
+});
+setUserNationality(userData.data.getSMAccount.nationality);
+console.log('User Data:', userData);
+} catch (error) {
+console.error('Error fetching user data:', error);
+}
+};
+fetchUserData();
+}, [Uzer]);
+
    const navigation = useNavigation();
    const today = new Date();
    let hours = (today.getHours() < 10 ? '0' : '') + today.getHours();
@@ -92,17 +124,17 @@ const ChmMbrShpInfo = (props:ChamaMmbrshpInfo) => {
 
 <Text style={styles.prodInfo}><Text style={styles.label}>Member Chama Number:</Text> {MembaId}</Text>
 <Text style={styles.prodInfo}><Text style={styles.label}>Member Chama ID:</Text> {ChamaNMember}</Text>
-<Text style={styles.prodInfo}><Text style={styles.label}>Funds to and from member Account:</Text> KES {NonLoanAcBal.toFixed(2)}</Text>
-<Text style={styles.prodInfo}><Text style={styles.label}>Subscription due:</Text> KES {Amt2HvBnSub.toFixed(2)}</Text>
-<Text style={styles.prodInfo}><Text style={styles.label}>Late subscription Penalties:</Text> KES {ttlLateSubs.toFixed(2)}</Text>
-<Text style={styles.prodInfo}><Text style={styles.label}>Subscription and Penalties:</Text> KES {ttlArrears}</Text>
-<Text style={styles.prodInfo}><Text style={styles.label}>Group Benefits:</Text> KES {ttlNonLonAcBal.toFixed(2)}</Text>
-<Text style={styles.prodInfo}><Text style={styles.label}>Group subscriptions:</Text> KES {subscribedAmt.toFixed(2)}</Text>
-<Text style={styles.prodInfo}><Text style={styles.label}>Gross Loans:</Text> KES {GrossLnsGvn.toFixed(2)}</Text>
-<Text style={styles.prodInfo}><Text style={styles.label}>Actual Loans:</Text> KES {LonAmtGven}</Text>
-<Text style={styles.prodInfo}><Text style={styles.label}>Amount repaid:</Text> KES {AmtRepaid.toFixed(2)}</Text>
-<Text style={styles.prodInfo}><Text style={styles.label}>Loan Balance:</Text> KES {LnBal.toFixed(2)}</Text>
-<Text style={styles.prodInfo}><Text style={styles.label}>Gross Loans:</Text> KES {GrossLnsGvn.toFixed(2)}</Text>
+<Text style={styles.prodInfo}><Text style={styles.label}>Funds to and from member Account:</Text> {formatAmountSync(Math.floor(NonLoanAcBal), userCode, ratesMap)}</Text>
+<Text style={styles.prodInfo}><Text style={styles.label}>Subscription due:</Text> {formatAmountSync(Math.floor(Amt2HvBnSub), userCode, ratesMap)}</Text>
+<Text style={styles.prodInfo}><Text style={styles.label}>Late subscription Penalties:</Text> {formatAmountSync(Math.floor(ttlLateSubs), userCode, ratesMap)}</Text>
+<Text style={styles.prodInfo}><Text style={styles.label}>Subscription and Penalties:</Text> {formatAmountSync(Math.floor(parseFloat(ttlArrears)), userCode, ratesMap)}</Text>
+<Text style={styles.prodInfo}><Text style={styles.label}>Group Benefits:</Text> {formatAmountSync(Math.floor(ttlNonLonAcBal), userCode, ratesMap)}</Text>
+<Text style={styles.prodInfo}><Text style={styles.label}>Group subscriptions:</Text> {formatAmountSync(Math.floor(subscribedAmt), userCode, ratesMap)}</Text>
+<Text style={styles.prodInfo}><Text style={styles.label}>Gross Loans:</Text> {formatAmountSync(Math.floor(GrossLnsGvn), userCode, ratesMap)}</Text>
+<Text style={styles.prodInfo}><Text style={styles.label}>Actual Loans:</Text> {formatAmountSync(Math.floor(LonAmtGven), userCode, ratesMap)}</Text>
+<Text style={styles.prodInfo}><Text style={styles.label}>Amount repaid:</Text> {formatAmountSync(Math.floor(AmtRepaid), userCode, ratesMap)}</Text>
+<Text style={styles.prodInfo}><Text style={styles.label}>Loan Balance:</Text> {formatAmountSync(Math.floor(LnBal), userCode, ratesMap)}</Text>
+<Text style={styles.prodInfo}><Text style={styles.label}>Gross Loans:</Text> {formatAmountSync(Math.floor(GrossLnsGvn), userCode, ratesMap)}</Text>
 <Text style={styles.prodInfo}><Text style={styles.label}>Loan Status:</Text> {loanStatus}</Text>
 <Text style={styles.prodInfo}><Text style={styles.label}>Black-Listing Statuse:</Text> {blStatus}</Text>
 <Text style={styles.prodInfo}><Text style={styles.label}>Membership Status:</Text> {AcStatus}</Text>

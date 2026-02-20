@@ -15,6 +15,8 @@ import { useRoute } from '@react-navigation/native';
 import { useExchange } from '../../../src/contexts/ExchangeContext';
 import { formatAmountSync } from '../../../src/utils/exchange';
 import { nationalityToCode } from '../../../src/utils/nationalityToCode';
+import { convertForeignToKsh } from '../../../src/utils/exchange';
+
 const client = generateClient();
 const MAX_IMAGE_SIZE_MB = 5;
 const formatAndValidateUrl = url => {
@@ -53,6 +55,7 @@ const CreateBiz = () => {
   const [itemPhotoKey, setItemPhotoKey] = useState(null);
   const [itemPhotoUri, setItemPhotoUri] = useState(null);
   const [businessOwnerNationality, setBusinessOwnerNationality] = useState<string | null>(null);
+  const PriceInKsh = convertForeignToKsh(formData.itemPrice, businessOwnerNationality);
   const route = useRoute();
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const [isUrlValid, setIsUrlValid] = useState(false);
@@ -91,6 +94,8 @@ const CreateBiz = () => {
         const ownerNat = smRes?.data?.getSMAccount?.nationality || null;
         setBusinessOwnerNationality(ownerNat);
         console.log('✅ Business owner nationality:', ownerNat);
+        console.log(PriceInKsh);
+        console.log(formData.itemPrice);
       }
     } catch (e) {
       console.warn('⚠️ Could not fetch business owner nationality:', e);
@@ -320,6 +325,8 @@ const CreateBiz = () => {
       const priceInOwnerCurrency = ownerCode
         ? formatAmountSync(parseFloat(itemPrice), ownerCode, ratesMap)
         : `Ksh ${parseFloat(itemPrice).toFixed(2)}`;
+
+        console.log(itemPrice);
       
       Alert.alert('Success', `Item successfully advertised.\n\nPrice: ${priceInOwnerCurrency}\n\n(Stored in backend as: Ksh ${parseFloat(itemPrice).toFixed(2)})`);
       clearForm();

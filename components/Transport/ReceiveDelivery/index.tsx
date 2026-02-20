@@ -1,5 +1,5 @@
 import { useNavigation } from '@react-navigation/core';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, Pressable, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 
 import styles from './styles';
@@ -28,6 +28,11 @@ import { Linking } from 'react-native';
 import * as Location from 'expo-location';
 import { getDistance } from 'geolib';
 import { useRoute, useNavigation as useNav } from '@react-navigation/native';
+
+import { formatAmountSync } from '../../../src/utils/exchange';
+import { nationalityToCode } from '../../../src/utils/nationalityToCode';
+import {useExchange} from '../../../src/contexts/ExchangeContext';
+
 
 export interface SMAccount {
   SMAc: {
@@ -77,6 +82,34 @@ const ViewSMDeposts = ({ SMAc }: SMAccount) => {
   const ChangeDeliveryLocation = () => {
     navigation.navigate("ChangeDeliveryLocation", { id });
   };
+
+  const client = generateClient();
+      const [Uzer, setUzer] = useState<string>(null);
+      const [userNationality, setUserNationality] = useState<string>(null);
+      const userCode = nationalityToCode(userNationality);
+      const {ratesMap} = useExchange();
+        
+     
+        
+     
+        useEffect(() => {
+                const fetchUserData = async () => {
+        
+                    const user = await fetchUserAttributes();
+                    setUzer(user.email);
+                    try {
+                        const userData = await client.graphql({
+                            query: getSMAccount,
+                            variables: { awsemail: user.email },
+                        });
+                        setUserNationality(userData.data.getSMAccount.nationality);
+                        console.log('User Data:', userData);
+                    } catch (error) {
+                        console.error('Error fetching user data:', error);
+                    }
+                };
+                fetchUserData();
+            }, [Uzer]);
 
   const handleAcceptDelivery = async () => {
     setIsLoading(true);
@@ -150,8 +183,8 @@ const ViewSMDeposts = ({ SMAc }: SMAccount) => {
       <Pressable style={styles.card}>
         <Text style={styles.prodInfo}>
           {transportName} transport services || {sellerName} to {buyerName} ||
-          {(() => { const { nationality, ratesMap } = useExchange(); return <>Aerial Distance: {distance} Kilometer || Order Total Cost: {formatAmountSync(orderCost, nationalityToCode(nationality), ratesMap)} ||</> })()}
-          TransportCost: Ksh. {deliveryCost} || Contact: {transportkntct} || {engagementStatus} ||
+         Aerial Distance: {distance} Kilometer || Order Total Cost: {formatAmountSync(orderCost, userCode, ratesMap)}
+          TransportCost: {formatAmountSync(deliveryCost, userCode, ratesMap)} || Contact: {transportkntct} || {engagementStatus} ||
           {((Date.now() - deliveryStart) / 3600000).toFixed(4)} hours ago
         </Text>
         <Text style={styles.prodDesc}>Order Description: {deliveryDesc}</Text>

@@ -1,8 +1,16 @@
 import { useNavigation } from '@react-navigation/core';
-import React from 'react';
+import React, {useEffect, useState} from 'react';
 import {Text,  Pressable,  } from 'react-native';
 
 import styles from './styles';
+
+import { formatAmountSync } from '../../../../../src/utils/exchange';
+import { nationalityToCode } from '../../../../../src/utils/nationalityToCode';
+import {useExchange} from '../../../../../src/contexts/ExchangeContext';
+import {fetchUserAttributes} from 'aws-amplify/auth';
+
+import { generateClient } from 'aws-amplify/api';  
+import { getSMAccount } from '../../../../../src/graphql/queries';
 
 
 export interface ChamaMmbrshpInfo {

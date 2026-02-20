@@ -1,7 +1,14 @@
-import React from 'react';
 import {View, Text,    ScrollView} from 'react-native';
 
 import styles from './styles';
+
+import React, {useEffect, useState} from 'react';
+import { formatAmountSync } from '../../../../../src/utils/exchange';
+import { nationalityToCode } from '../../../../../src/utils/nationalityToCode';
+import {useExchange} from '../../../../../src/contexts/ExchangeContext';
+import { generateClient } from 'aws-amplify/api';  
+import { getSMAccount } from '../../../../../src/graphql/queries';
+import {fetchUserAttributes} from 'aws-amplify/auth';
 
 
 export interface ChmCvLnSttusSent {
@@ -54,6 +61,31 @@ const ChmCvLnSttsSent = (props:ChmCvLnSttusSent) => {
     DefaultPenaltyChm2,
    }} = props ;
 
+const client = generateClient();
+const [Uzer, setUzer] = useState<string>(null);
+const [userNationality, setUserNationality] = useState<string>(null);
+const userCode = nationalityToCode(userNationality);
+const {ratesMap} = useExchange();
+
+useEffect(() => {
+const fetchUserData = async () => {
+                        
+const user = await fetchUserAttributes();
+setUzer(user.email);
+try {
+const userData = await client.graphql({
+query: getSMAccount,
+variables: { awsemail: user.email },
+});
+setUserNationality(userData.data.getSMAccount.nationality);
+console.log('User Data:', userData);
+} catch (error) {
+console.error('Error fetching user data:', error);
+}
+};
+fetchUserData();
+}, [Uzer]);
+
    const today = new Date();
               let hours = (today.getHours() < 10 ? '0' : '') + today.getHours();
               let minutes = (today.getMinutes() < 10 ? '0' : '') + today.getMinutes();
@@ -91,10 +123,10 @@ const ChmCvLnSttsSent = (props:ChmCvLnSttusSent) => {
 
         <Text style={styles.prodInfo}><Text style={styles.label}>Loan Id:</Text> {loanID}</Text>
         <Text style={styles.prodInfo}><Text style={styles.label}>Member Chama ID:</Text> {memberId}</Text>
-        <Text style={styles.prodInfo}><Text style={styles.label}>Amount Given:</Text> KES {amountGiven.toFixed(2)}</Text>
-        <Text style={styles.prodInfo}><Text style={styles.label}>Amount Repaid:</Text> KES {amountRepaid.toFixed(2)}</Text>
+        <Text style={styles.prodInfo}><Text style={styles.label}>Amount Given:</Text> {formatAmountSync(amountGiven, userCode, ratesMap)}</Text>
+        <Text style={styles.prodInfo}><Text style={styles.label}>Amount Repaid:</Text> {formatAmountSync(amountRepaid, userCode, ratesMap)}</Text>
        
-       <Text style={styles.prodInfo}><Text style={styles.label}>Loan Balance with penalties:</Text> {LonBal1.toFixed(2)}</Text>
+       <Text style={styles.prodInfo}><Text style={styles.label}>Loan Balance with penalties:</Text> {formatAmountSync(LonBal1, userCode, ratesMap)}</Text>
         <Text style={styles.prodInfo}><Text style={styles.label}>Repayment Period in days:</Text> {repaymentPeriod}</Text>
         <Text style={styles.prodInfo}><Text style={styles.label}>Member Contact:</Text> {loaneePhn}</Text>
         <Text style={styles.prodInfo}><Text style={styles.label}>Advocate Registration Number:</Text> {advRegNu}</Text>

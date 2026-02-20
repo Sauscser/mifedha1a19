@@ -17,6 +17,8 @@ const RegisterAuditor = ({
 
   // Form state
   const [auditorEmail, setAuditorEmail] = useState('');
+    const [auditorClient, setAuditorClient] = useState('');
+
   const [mainPassword, setMainPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -71,7 +73,7 @@ const RegisterAuditor = ({
             name: auditorData.name,
             email: auditorEmail,
             active: true,
-            organization: usr,
+            organization: auditorClient,
             regions: [],
             createdAt,
             updatedAt: createdAt
@@ -109,6 +111,7 @@ const RegisterAuditor = ({
   };
   const resetForm = () => {
     setAuditorEmail('');
+    setAuditorClient('');
     setMainPassword('');
     setShowPassword(false);
   };
@@ -128,6 +131,10 @@ const RegisterAuditor = ({
         <View style={ui.card}>
           <Text style={ui.label}>COMB Officer Email</Text>
           <TextInput placeholder="email@example.com" placeholderTextColor="#333" value={auditorEmail} onChangeText={setAuditorEmail} style={ui.input} keyboardType="email-address" autoCapitalize="none" />
+
+
+        <Text style={ui.label}>Auditor's Client</Text>
+          <TextInput placeholder="Company's Account Number" placeholderTextColor="#333" value={auditorClient} onChangeText={setAuditorClient} style={ui.input} keyboardType="email-address" autoCapitalize="none" />
 
           <Text style={ui.label}>Main Account Password</Text>
           <View style={ui.passwordRow}>

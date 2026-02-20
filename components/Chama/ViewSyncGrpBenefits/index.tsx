@@ -1,5 +1,4 @@
 import { useNavigation } from '@react-navigation/native';
-import React, {useState} from 'react';
 import {View, Text,   ScrollView, Pressable, Alert} from 'react-native';
 
 
@@ -7,8 +6,13 @@ import {View, Text,   ScrollView, Pressable, Alert} from 'react-native';
 
 import styles from './styles';
 import { createChamaDepositSync, createChamaDividendsSync, createChamaLoanSync, updateGroup } from '../../../src/graphql/mutations';
-import { getGroup } from '../../../src/graphql/queries';
-
+import { formatAmountSync } from '../../../src/utils/exchange';
+import React, {useState, useEffect} from 'react';
+import { nationalityToCode } from '../../../src/utils/nationalityToCode';
+import {useExchange} from '../../../src/contexts/ExchangeContext';
+import { generateClient } from 'aws-amplify/api';  
+import { getSMAccount } from '../../../src/graphql/queries';
+import {fetchUserAttributes} from 'aws-amplify/auth';
 
 export interface SMAccount {
     SMAc: {
@@ -34,8 +38,30 @@ const SMCvLnStts = (props:SMAccount) => {
    const navigation = useNavigation();
    const[isLoading, setIsLoading] = useState(false);
    
+  const client = generateClient();
+  const [Uzer, setUzer] = useState<string>(null);
+  const [userNationality, setUserNationality] = useState<string>(null);
+  const userCode = nationalityToCode(userNationality);
+  const {ratesMap} = useExchange();
   
-                                                               
+  useEffect(() => {
+  const fetchUserData = async () => {
+                          
+  const user = await fetchUserAttributes();
+  setUzer(user.email);
+  try {
+  const userData = await client.graphql({
+  query: getSMAccount,
+  variables: { awsemail: user.email },
+  });
+  setUserNationality(userData.data.getSMAccount.nationality);
+  console.log('User Data:', userData);
+  } catch (error) {
+  console.error('Error fetching user data:', error);
+  }
+  };
+  fetchUserData();
+  }, [Uzer]);
 
 
     return (
@@ -44,7 +70,7 @@ const SMCvLnStts = (props:SMAccount) => {
             <Text style={styles.prodInfo}><Text style={styles.label}>Group Name:</Text> {ChamaName}</Text>
             <Text style={styles.prodInfo}><Text style={styles.label}>Group Account:</Text> {GrpAc}</Text>
             {/* Replace KES with dynamic currency */}
-            <Text style={styles.prodInfo}><Text style={styles.label}>Sync Amount:</Text> {formatAmountSync(amount)}</Text>
+            <Text style={styles.prodInfo}><Text style={styles.label}>Sync Amount:</Text> {formatAmountSync(Math.floor(amount), userCode, ratesMap)}</Text>
             <Text style={styles.prodInfo}><Text style={styles.label}>Time Synced:</Text> {createdAt}</Text>
          </View>
         </View> 

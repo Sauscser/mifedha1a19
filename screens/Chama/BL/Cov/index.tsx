@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Communications from 'react-native-communications';
 import { updateCompany, updateSMAccount, updateCvrdGroupLoans, updateGroup, updateChamaMembers, createMessages, sendNotification } from '../../../../src/graphql/mutations';
 import { getCompany, getSMAccount, getCvrdGroupLoans, getGroup, getChamaMembers } from '../../../../src/graphql/queries';
@@ -6,12 +6,47 @@ import { generateClient } from 'aws-amplify/api';
 import { getCurrentUser, fetchUserAttributes } from 'aws-amplify/auth';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { View, Text, ScrollView, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
+
+import { formatAmountSync } from '../../../../src/utils/exchange';
+import { nationalityToCode } from '../../../../src/utils/nationalityToCode';
+import {useExchange} from '../../../../src/contexts/ExchangeContext';
+
 import styles from './styles';
 const client = generateClient();
 const BLChmCovLoanee = () => {
   const navigation = useNavigation();
   const route = useRoute();
   const [isLoading, setIsLoading] = useState(false);
+
+const client = generateClient();
+const [Uzer, setUzer] = useState<string>(null);
+const [userNationality, setUserNationality] = useState<string>(null);
+const userCode = nationalityToCode(userNationality);
+const {ratesMap} = useExchange();
+                       
+                    
+                       
+                    
+useEffect(() => {
+const fetchUserData = async () => {
+                       
+const user = await fetchUserAttributes();
+setUzer(user.email);
+                try {
+                const userData = await client.graphql({
+                query: getSMAccount,
+                variables: { awsemail: user.email },
+                });
+                setUserNationality(userData.data.getSMAccount.nationality);
+                console.log('User Data:', userData);
+                } catch (error) {
+                console.error('Error fetching user data:', error);
+                }
+                };
+                fetchUserData();
+                }, [Uzer]);
+
+
   const gtCompDtls = async () => {
     if (isLoading) return;
     setIsLoading(true);
@@ -155,8 +190,26 @@ const BLChmCovLoanee = () => {
           DefaultPenaltyChm2: DefaultPenaltyChm.toFixed(0)
         });
         Alert.alert(`${grpName}, you have penalised ${loaneeName}`);
-        Communications.textWithoutEncoding(loaneePhn, `MiFedha. Hi ${loaneeName}, your loan of ID ${route.params.loanID} has been penalised after blacklisting by ${grpName}. Total repayable: Ksh. ${LonBal5.toFixed(0)}.`);
-      }
+
+        await client.graphql({
+                query: createMessages,
+                variables: {
+                  input: {
+                    senderEmail: loanee.awsemail,
+                    messageBody: `Hi ${loaneeName}, your loan of ID ${route.params.loanID} has been penalised after blacklisting by ${grpName}. Total repayable: Ksh. ${formatAmountSync(Math.floor(LonBal5), userCode, ratesMap)}.`
+                  }
+                }
+              });
+              await client.graphql({
+                query: sendNotification,
+                variables: {
+                  riderEmail: loanee.awsemail,
+                  title: 'MiFedha: Group Loan Penalty',
+                  body: `You have been penalised for your loan of ID ${route.params.loanID} by ${grpName}. Total repayable: Ksh. ${formatAmountSync(Math.floor(LonBal5), userCode, ratesMap)}.`
+                }
+              });
+
+  }
       async function blacklistLoan() {
         await updateCvrdGroupLoansAPI({
           amountExpectedBackWthClrnc: LonBal4.toFixed(0),
@@ -218,7 +271,7 @@ const BLChmCovLoanee = () => {
           variables: {
             input: {
               senderEmail: loaneePhn,
-              messageBody: `MiFedha: Hi ${loaneeName}, your loan of ID ${route.params.loanID} has been blacklisted by ${grpName}. Total repayable: Ksh. ${LonBal4.toFixed(0)}.`
+              messageBody: `MiFedha: Hi ${loaneeName}, your loan of ID ${route.params.loanID} has been blacklisted by ${grpName}. Total repayable: Ksh. ${formatAmountSync(Math.floor(LonBal4), userCode, ratesMap)}.`
             }
           }
         });
@@ -227,7 +280,7 @@ const BLChmCovLoanee = () => {
           variables: {
             riderEmail: loaneePhn,
             title: 'MiFedha: Loan Blacklisted',
-            body: `Hi ${loaneeName}, your loan of ID ${route.params.loanID} has been blacklisted by ${grpName}. Total repayable: Ksh. ${LonBal4.toFixed(0)}.`
+            body: `Hi ${loaneeName}, your loan of ID ${route.params.loanID} has been blacklisted by ${grpName}. Total repayable: Ksh. ${formatAmountSync(Math.floor(LonBal4), userCode, ratesMap)}.`
           }
         });
         Alert.alert(`${grpName}, you have blacklisted ${loaneeName}`);

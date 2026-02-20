@@ -3,8 +3,12 @@ import { useNavigation, useRoute } from '@react-navigation/core';
 
 import { View, Text, ScrollView, Pressable, Alert } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { generateClient } from 'aws-amplify/api';
-  
+import { formatAmountSync } from '../../../../../src/utils/exchange';
+import { nationalityToCode } from '../../../../../src/utils/nationalityToCode';
+import {useExchange} from '../../../../../src/contexts/ExchangeContext';
+import {fetchUserAttributes} from 'aws-amplify/auth';
+
+import { generateClient } from 'aws-amplify/api';  
 import Communications from 'react-native-communications';
 import {
   
@@ -96,6 +100,31 @@ const ChmMbrShpInfo = (props: ChamaMmbrshpInfo) => {
     },
   } = props;
 
+  const client = generateClient();
+  const [Uzer, setUzer] = useState<string>(null);
+  const [userNationality, setUserNationality] = useState<string>(null);
+  const userCode = nationalityToCode(userNationality);
+  const {ratesMap} = useExchange();
+  
+  useEffect(() => {
+  const fetchUserData = async () => {
+                          
+  const user = await fetchUserAttributes();
+  setUzer(user.email);
+  try {
+  const userData = await client.graphql({
+  query: getSMAccount,
+  variables: { awsemail: user.email },
+  });
+  setUserNationality(userData.data.getSMAccount.nationality);
+  console.log('User Data:', userData);
+  } catch (error) {
+  console.error('Error fetching user data:', error);
+  }
+  };
+  fetchUserData();
+  }, [Uzer]);
+
   const today = new Date();
   let hours = (today.getHours() < 10 ? '0' : '') + today.getHours();
   let minutes = (today.getMinutes() < 10 ? '0' : '') + today.getMinutes();
@@ -111,7 +140,6 @@ const ChmMbrShpInfo = (props: ChamaMmbrshpInfo) => {
   const subFreq = tmDif / subscriptionFrequency;
   const Amt2HvBnSub = subFreq * subscriptionAmt;
   const ttlArrears = (ttlLateSubs + Amt2HvBnSub).toFixed(0);
-  const client = generateClient();
 
   const navigation = useNavigation();
    const [SenderNatId, setSenderNatId] = useState('');
@@ -199,10 +227,10 @@ const ChmMbrShpInfo = (props: ChamaMmbrshpInfo) => {
           <Text style={styles.label}>Member Chama Number:</Text> {MembaId}
         </Text>
         <Text style={styles.prodInfo}>
-          <Text style={styles.label}>Subscription up to date:</Text> KES {subscribedAmt.toFixed(2)}
+          <Text style={styles.label}>Subscription up to date:</Text> {formatAmountSync(Math.floor(subscribedAmt), userCode, ratesMap)}
         </Text>
         <Text style={styles.prodInfo}>
-          <Text style={styles.label}>Subscription with Penalties:</Text> KES {parseFloat(ttlArrears).toFixed(2)}
+          <Text style={styles.label}>Subscription with Penalties:</Text> {formatAmountSync(Math.floor(parseFloat(ttlArrears)), userCode, ratesMap)}
         </Text>
       </Pressable>
 

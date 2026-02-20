@@ -1,11 +1,15 @@
 import { useNavigation } from '@react-navigation/native';
-import React from 'react';
 import {View, Text,   ScrollView, Pressable} from 'react-native';
 
 
 import styles from './styles';
-import { TouchableOpacity } from 'react-native-gesture-handler';
-
+import React, {useState, useEffect} from 'react';
+import { nationalityToCode } from '../../../../src/utils/nationalityToCode';
+import {useExchange} from '../../../../src/contexts/ExchangeContext';
+import { generateClient } from 'aws-amplify/api';  
+import { getSMAccount } from '../../../../src/graphql/queries';
+import {fetchUserAttributes} from 'aws-amplify/auth';
+import { formatAmountSync } from '../../../../src/utils/exchange';
 
 export interface SMAccount {
     SMAc: {
@@ -50,7 +54,30 @@ const SMCvLnStts = (props:SMAccount) => {
     navigation.navigate("VwBenProdsDtls", {beneficiaryID});
   }
 
+const client = generateClient();
+const [Uzer, setUzer] = useState<string>(null);
+const [userNationality, setUserNationality] = useState<string>(null);
+const userCode = nationalityToCode(userNationality);
+const {ratesMap} = useExchange();
 
+useEffect(() => {
+const fetchUserData = async () => {
+                        
+const user = await fetchUserAttributes();
+setUzer(user.email);
+try {
+const userData = await client.graphql({
+query: getSMAccount,
+variables: { awsemail: user.email },
+});
+setUserNationality(userData.data.getSMAccount.nationality);
+console.log('User Data:', userData);
+} catch (error) {
+console.error('Error fetching user data:', error);
+}
+};
+fetchUserData();
+}, [Uzer]);   
 
     return (
         
@@ -60,8 +87,8 @@ const SMCvLnStts = (props:SMAccount) => {
 
         <Text style={styles.prodInfo}><Text style={styles.label}>Benefactor Business/Company:</Text> {creatorName}</Text>
         <Text style={styles.prodInfo}><Text style={styles.label}>Beneficiary Name:</Text> {beneficiaryPhone}</Text>
-        <Text style={styles.prodInfo}><Text style={styles.label}>Cost:</Text> KES {prodCost.toLocaleString()}</Text>
-        <Text style={styles.prodInfo}><Text style={styles.label}>Benefits Pooled:</Text> KES {benefitsAmount.toLocaleString()}</Text>
+        <Text style={styles.prodInfo}><Text style={styles.label}>Cost:</Text> {formatAmountSync(Math.floor(prodCost), userCode, ratesMap)}</Text>
+        <Text style={styles.prodInfo}><Text style={styles.label}>Benefits Pooled:</Text> {formatAmountSync(Math.floor(benefitsAmount), userCode, ratesMap)}</Text>
        <Text style={styles.prodDesc}>{prodDesc}</Text>
       </Pressable>
 

@@ -338,7 +338,7 @@ const CreateCombContractScreen: React.FC = () => {
         generalPriceDev: 0,
         createdAt: new Date().toISOString(),
         advertStatus: "Pending",
-        sellerType: "sellerTypePal"
+        sellerType: "sellerTypePal",
       };
       await client.graphql({
         query: createCombContract,

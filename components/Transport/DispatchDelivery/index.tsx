@@ -1,5 +1,4 @@
 import { useNavigation } from '@react-navigation/core';
-import React, { useState } from 'react';
 import { View, Text, ScrollView, Pressable, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 
 import styles from './styles';
@@ -9,6 +8,15 @@ import { getTransportOrder, getSMAccount, getBizna, getGroup, getChamaMembers, g
 import { updateTransportOrder, updateSMAccount, updateGroup, updateCompany } from '../../../src/graphql/mutations';
 import { Linking } from 'react-native';
 import { useRoute } from '@react-navigation/native';
+
+import React, {useEffect, useState} from 'react';
+
+import { formatAmountSync } from '../../../src/utils/exchange';
+import { nationalityToCode } from '../../../src/utils/nationalityToCode';
+import {useExchange} from '../../../src/contexts/ExchangeContext';
+
+import {fetchUserAttributes} from 'aws-amplify/auth';
+
 
 export interface SMAccount {
   SMAc: {
@@ -53,6 +61,34 @@ const ViewSMDeposts = ({ SMAc }: SMAccount) => {
   const [isLoading, setIsLoading] = useState(false);
 
   const route = useRoute();
+
+  const client = generateClient();
+      const [Uzer, setUzer] = useState<string>(null);
+      const [userNationality, setUserNationality] = useState<string>(null);
+      const userCode = nationalityToCode(userNationality);
+      const {ratesMap} = useExchange();
+        
+     
+        
+     
+        useEffect(() => {
+                const fetchUserData = async () => {
+        
+                    const user = await fetchUserAttributes();
+                    setUzer(user.email);
+                    try {
+                        const userData = await client.graphql({
+                            query: getSMAccount,
+                            variables: { awsemail: user.email },
+                        });
+                        setUserNationality(userData.data.getSMAccount.nationality);
+                        console.log('User Data:', userData);
+                    } catch (error) {
+                        console.error('Error fetching user data:', error);
+                    }
+                };
+                fetchUserData();
+            }, [Uzer]);
 
   const handleAcceptDelivery = async () => {
     setIsLoading(true);
@@ -127,8 +163,8 @@ const ViewSMDeposts = ({ SMAc }: SMAccount) => {
       <Pressable style={styles.card}>
         <Text style={styles.prodInfo}>
           {transportName} transport services || {sellerName} to {buyerName} ||
-          {(() => { const { nationality, ratesMap } = useExchange(); return <>Aerial Distance: {distance} Kilometer || Order Total Cost: {formatAmountSync(orderCost, nationalityToCode(nationality), ratesMap)} ||</> })()}
-          TransportCost: Ksh. {deliveryCost} || Contact: {transportkntct} || {engagementStatus} ||
+          {(() => { const { nationality, ratesMap } = useExchange(); return <>Aerial Distance: {distance} Kilometer || Order Total Cost: {formatAmountSync(orderCost, userCode, ratesMap)} ||</> })()}
+          TransportCost: Ksh. {formatAmountSync(deliveryCost, userCode, ratesMap)} || Contact: {transportkntct} || {engagementStatus} ||
           {bizType} || {transportRequest}
         </Text>
 

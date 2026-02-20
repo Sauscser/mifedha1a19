@@ -1,7 +1,13 @@
-import React from 'react';
 import { View, Text, ScrollView, Image, Linking, TouchableOpacity } from 'react-native';
+import { useNavigation } from '@react-navigation/core';
+import React, {useEffect, useState} from 'react';
 import styles from './styles';
-
+import { formatAmountSync } from '../../../src/utils/exchange';
+import { nationalityToCode } from '../../../src/utils/nationalityToCode';
+import {useExchange} from '../../../src/contexts/ExchangeContext';
+import { getSMAccount } from '../../../src/graphql/queries';
+import {fetchUserAttributes} from 'aws-amplify/auth';
+import { generateClient } from 'aws-amplify/api';
 export interface SMAccount {
   SMAc: {
     sokokntct: string;
@@ -39,6 +45,36 @@ const ViewSMDeposts = ({ SMAc }: SMAccount) => {
      // added here
   } = SMAc;
 
+
+  const client = generateClient();
+     const [Uzer, setUzer] = useState<string>(null);
+     const [userNationality, setUserNationality] = useState<string>(null);
+     const userCode = nationalityToCode(userNationality);
+     const {ratesMap} = useExchange();
+                
+             
+                
+             
+         useEffect(() => {
+         const fetchUserData = async () => {
+                
+         const user = await fetchUserAttributes();
+         setUzer(user.email);
+         try {
+         const userData = await client.graphql({
+         query: getSMAccount,
+         variables: { awsemail: user.email },
+         });
+         setUserNationality(userData.data.getSMAccount.nationality);
+         console.log('User Data:', userData);
+         } catch (error) {
+         console.error('Error fetching user data:', error);
+         }
+         };
+         fetchUserData();
+         }, [Uzer]);
+
+
   const handleOpenLink = () => {
     if (sokotown) {
       Linking.openURL(sokotown).catch(err => console.error("Couldn't load page", err));
@@ -64,7 +100,7 @@ const ViewSMDeposts = ({ SMAc }: SMAccount) => {
             <Text style={styles.label}>Item Name:</Text> {sokoname}
           </Text>
           <Text style={styles.prodInfo}>
-            <Text style={styles.label}>Item Price:</Text> KES {sokoprice.toLocaleString()}
+            <Text style={styles.label}>Item Price:</Text> {formatAmountSync((sokoprice), userCode, ratesMap)}
           </Text>
           <Text style={styles.prodInfo}>
             <Text style={styles.label}>Brand:</Text> {itemBrand}

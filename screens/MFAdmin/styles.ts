@@ -207,4 +207,50 @@ const styles = StyleSheet.create({
     marginTop: 1
   }
 });
-export default styles;
+// Modern button styles for professional redesign
+
+const modernButton = {
+  flexDirection: 'row' as const,
+  alignItems: 'center' as const,
+  backgroundColor: '#0984e3',
+  borderRadius: 8,
+  paddingVertical: 8,
+  paddingHorizontal: 12,
+  marginBottom: 8,
+  marginHorizontal: 2,
+  minWidth: 100,
+  justifyContent: 'center' as const,
+  shadowColor: '#636e72',
+  shadowOpacity: 0.15,
+  shadowRadius: 4,
+  elevation: 2,
+};
+const modernButtonWide = {
+  flexDirection: 'row' as const,
+  alignItems: 'center' as const,
+  backgroundColor: '#00b894',
+  borderRadius: 8,
+  paddingVertical: 10,
+  paddingHorizontal: 16,
+  marginBottom: 10,
+  marginHorizontal: 4,
+  minWidth: 150,
+  justifyContent: 'center' as const,
+  shadowColor: '#636e72',
+  shadowOpacity: 0.15,
+  shadowRadius: 4,
+  elevation: 2,
+};
+const modernButtonText = {
+  color: '#fff',
+  fontWeight: 'bold' as const,
+  fontSize: 15,
+  marginLeft: 8,
+};
+
+export default {
+  ...styles,
+  modernButton,
+  modernButtonWide,
+  modernButtonText,
+};

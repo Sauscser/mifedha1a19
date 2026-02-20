@@ -1,6 +1,12 @@
 import { useNavigation } from '@react-navigation/native';
-import React, { useState } from 'react';
+import React, { useState , useEffect} from 'react';
 import {View, Text,   ScrollView, Pressable} from 'react-native';
+import { formatAmountSync } from '../../../../src/utils/exchange';
+import { nationalityToCode } from '../../../../src/utils/nationalityToCode';
+import {useExchange} from '../../../../src/contexts/ExchangeContext';
+import { getSMAccount } from '../../../../src/graphql/queries';
+import {fetchUserAttributes} from 'aws-amplify/auth';
+import { generateClient } from 'aws-amplify/api';
 
 
 import styles from './styles';
@@ -48,6 +54,33 @@ const SMCvLnStts = (props:SMAccount) => {
 
 }
 
+const client = generateClient();
+          const [Uzer, setUzer] = useState<string>(null);
+          const [userNationality, setUserNationality] = useState<string>(null);
+          const userCode = nationalityToCode(userNationality);
+          const {ratesMap} = useExchange();
+      
+   
+      
+   
+      useEffect(() => {
+              const fetchUserData = async () => {
+      
+                  const user = await fetchUserAttributes();
+                  setUzer(user.email);
+                  try {
+                      const userData = await client.graphql({
+                          query: getSMAccount,
+                          variables: { awsemail: user.email },
+                      });
+                      setUserNationality(userData.data.getSMAccount.nationality);
+                      console.log('User Data:', userData);
+                  } catch (error) {
+                      console.error('Error fetching user data:', error);
+                  }
+              };
+              fetchUserData();
+          }, [Uzer]);
    
     return (
         
@@ -60,7 +93,7 @@ const SMCvLnStts = (props:SMAccount) => {
                       <View >
                       <Text style = {styles.card}>                       
                        {/*loaner details */}   
-                      Hi! it's {loaneeName}. Kindly Loan me Ksh. {amount}. I 
+                      Hi! it's {loaneeName}. Kindly Loan me Ksh. {formatAmountSync(amount, userCode, ratesMap)}. I 
                       commit to repay at a compound interest of {repaymentAmt}% per year within {repaymentPeriod} days. 
                       Each Installment is {installmentAmount} after every {paymentFrequency} days.
                       You can reach me through {loaneePhone}.       

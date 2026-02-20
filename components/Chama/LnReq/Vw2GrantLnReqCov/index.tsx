@@ -1,5 +1,4 @@
 import { useNavigation } from '@react-navigation/native';
-import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -10,8 +9,14 @@ import {
 import {
   updateReqLoanChama,
 } from '../../../../src/graphql/mutations';
-import { generateClient } from 'aws-amplify/api';
 import { getCurrentUser, fetchUserAttributes } from 'aws-amplify/auth';
+
+import React, {useEffect, useState} from 'react';
+import { formatAmountSync } from '../../../../src/utils/exchange';
+import { nationalityToCode } from '../../../../src/utils/nationalityToCode';
+import {useExchange} from '../../../../src/contexts/ExchangeContext';
+import { generateClient } from 'aws-amplify/api';  
+import { getSMAccount } from '../../../../src/graphql/queries';
 
 import styles from './styles';
 import { getReqLoanChama } from '../../../../src/graphql/queries';
@@ -61,6 +66,31 @@ const SMCvLnStts = (props: SMAccount) => {
   const SndChmMmbrMny2 = () => {
     navigation.navigate('DeclChamaReq', { id });
   };
+
+const client = generateClient();
+const [Uzer, setUzer] = useState<string>(null);
+const [userNationality, setUserNationality] = useState<string>(null);
+const userCode = nationalityToCode(userNationality);
+const {ratesMap} = useExchange();
+
+useEffect(() => {
+const fetchUserData = async () => {
+                        
+const user = await fetchUserAttributes();
+setUzer(user.email);
+try {
+const userData = await client.graphql({
+query: getSMAccount,
+variables: { awsemail: user.email },
+});
+setUserNationality(userData.data.getSMAccount.nationality);
+console.log('User Data:', userData);
+} catch (error) {
+console.error('Error fetching user data:', error);
+}
+};
+fetchUserData();
+}, [Uzer]);
 
   const FetchSign4 = async () => {
     const user = await getCurrentUser();
@@ -186,7 +216,7 @@ const SMCvLnStts = (props: SMAccount) => {
     <View style={styles.pageContainer}>
       <View style={styles.card}>
         <Text style={styles.prodInfo}>
-          Hi! it's {loaneeName}. Kindly Loan me Ksh. {amount}. I commit to repay
+          Hi! it's {loaneeName}. Kindly Loan me {formatAmountSync(Math.floor(amount), userCode, ratesMap)}. I commit to repay
           at a compound interest of {repaymentAmt}% per year within {repaymentPeriod} days. Each Installment is {installmentAmount} after
           every {paymentFrequency} days. You can reach me through {loaneePhone}.
         </Text>

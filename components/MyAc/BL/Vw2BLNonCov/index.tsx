@@ -1,7 +1,13 @@
 import { useNavigation } from '@react-navigation/core';
-import React from 'react';
+import React, {useEffect, useState} from 'react';
 import {View, Text,  Pressable,  } from 'react-native';
 import styles from './styles';
+import { formatAmountSync } from '../../../../src/utils/exchange';
+import { nationalityToCode } from '../../../../src/utils/nationalityToCode';
+import {useExchange} from '../../../../src/contexts/ExchangeContext';
+import { getSMAccount } from '../../../../src/graphql/queries';
+import {fetchUserAttributes} from 'aws-amplify/auth';
+import { generateClient } from 'aws-amplify/api';
 
 
 export interface SMCvLnSttus {
@@ -33,6 +39,34 @@ const SMCvLnStts = (props:SMCvLnSttus) => {
        navigation.navigate("BListSMLneeNonCovs", {id})
    }
 
+   const client = generateClient();
+                   const [Uzer, setUzer] = useState<string>(null);
+                   const [userNationality, setUserNationality] = useState<string>(null);
+                   const userCode = nationalityToCode(userNationality);
+                   const {ratesMap} = useExchange();
+               
+            
+               
+            
+               useEffect(() => {
+                       const fetchUserData = async () => {
+               
+                           const user = await fetchUserAttributes();
+                           setUzer(user.email);
+                           try {
+                               const userData = await client.graphql({
+                                   query: getSMAccount,
+                                   variables: { awsemail: user.email },
+                               });
+                               setUserNationality(userData.data.getSMAccount.nationality);
+                               console.log('User Data:', userData);
+                           } catch (error) {
+                               console.error('Error fetching user data:', error);
+                           }
+                       };
+                       fetchUserData();
+                   }, [Uzer]);
+
     return (
         <Pressable 
        onPress={SndChmMmbrMny}
@@ -57,7 +91,7 @@ const SMCvLnStts = (props:SMCvLnSttus) => {
                     </Text>
                     <Text style ={styles.amountoffered}>                       
                        {/* amount*/} 
-                       Loan Balance (Ksh): {lonBala}
+                       Loan Balance : {formatAmountSync(lonBala, userCode, ratesMap)}
                     </Text>   
 
                     <Text style = {styles.amountoffered}>                       

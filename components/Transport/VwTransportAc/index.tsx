@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect} from 'react';
 import { View, Text, Pressable, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 
 import styles from './styles';
@@ -7,6 +7,12 @@ import { remove } from 'aws-amplify/storage';
 import { updateTransportRegister, deleteTransportRegister } from '../../../src/graphql/mutations';
 import * as Location from 'expo-location';
 import { useNavigation } from '@react-navigation/native';
+
+import { formatAmountSync } from '../../../src/utils/exchange';
+import { nationalityToCode } from '../../../src/utils/nationalityToCode';
+import {useExchange} from '../../../src/contexts/ExchangeContext';
+import { getSMAccount } from '../../../src/graphql/queries';
+import {fetchUserAttributes} from 'aws-amplify/auth';
 
 export interface SMAccount {
   SMAc: {
@@ -64,6 +70,34 @@ const ViewSMDeposts = ({ SMAc }: SMAccount) => {
   const ViewDeliveryPayments = () => {
     navigation.navigate("ViewDeliveryPayments");
   };
+
+      const client = generateClient();
+      const [Uzer, setUzer] = useState<string>(null);
+      const [userNationality, setUserNationality] = useState<string>(null);
+      const userCode = nationalityToCode(userNationality);
+      const {ratesMap} = useExchange();
+        
+     
+        
+     
+        useEffect(() => {
+                const fetchUserData = async () => {
+        
+                    const user = await fetchUserAttributes();
+                    setUzer(user.email);
+                    try {
+                        const userData = await client.graphql({
+                            query: getSMAccount,
+                            variables: { awsemail: user.email },
+                        });
+                        setUserNationality(userData.data.getSMAccount.nationality);
+                        console.log('User Data:', userData);
+                    } catch (error) {
+                        console.error('Error fetching user data:', error);
+                    }
+                };
+                fetchUserData();
+            }, [Uzer]);
 
   const fetchLocation = async () => {
     setIsLoading(true);
@@ -143,7 +177,7 @@ const ViewSMDeposts = ({ SMAc }: SMAccount) => {
     <View style={styles.pageContainer}>
       <Pressable style={styles.card}>
         <Text style={styles.prodInfo}>
-          {transportName} transport services || TransportRate: {transportRate} || Earnings: {Earnings} || Description: {transportdesc}
+          {transportName} transport services || TransportRate: {formatAmountSync(transportRate, userCode, ratesMap)} || Earnings: {formatAmountSync(Earnings, userCode, ratesMap)} || Description: {transportdesc}
         </Text>
       </Pressable>
 

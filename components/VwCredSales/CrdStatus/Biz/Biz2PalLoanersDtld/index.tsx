@@ -1,6 +1,13 @@
-import React from 'react';
-import {View, Text, ImageBackground, Pressable, TextInput, ScrollView} from 'react-native';
+import { useNavigation } from '@react-navigation/core';
+import React, {useEffect, useState} from 'react';
+import {View, Text,  Pressable,  } from 'react-native';
 import styles from './styles';
+import { formatAmountSync } from '../../../../../src/utils/exchange';
+import { nationalityToCode } from '../../../../../src/utils/nationalityToCode';
+import {useExchange} from '../../../../../src/contexts/ExchangeContext';
+import { getSMAccount } from '../../../../../src/graphql/queries';
+import {fetchUserAttributes} from 'aws-amplify/auth';
+import { generateClient } from 'aws-amplify/api';
 
 
 export interface ChmCvLnSttusRec {
@@ -58,6 +65,34 @@ const CredByrCvLnStts = (props:ChmCvLnSttusRec) => {
 
   }} = props ;
 
+      const client = generateClient();
+      const [Uzer, setUzer] = useState<string>(null);
+      const [userNationality, setUserNationality] = useState<string>(null);
+      const userCode = nationalityToCode(userNationality);
+      const {ratesMap} = useExchange();
+        
+     
+        
+     
+        useEffect(() => {
+                const fetchUserData = async () => {
+        
+                    const user = await fetchUserAttributes();
+                    setUzer(user.email);
+                    try {
+                        const userData = await client.graphql({
+                            query: getSMAccount,
+                            variables: { awsemail: user.email },
+                        });
+                        setUserNationality(userData.data.getSMAccount.nationality);
+                        console.log('User Data:', userData);
+                    } catch (error) {
+                        console.error('Error fetching user data:', error);
+                    }
+                };
+                fetchUserData();
+            }, [Uzer]);
+
   const today = new Date();
               let hours = (today.getHours() < 10 ? '0' : '') + today.getHours();
               let minutes = (today.getMinutes() < 10 ? '0' : '') + today.getMinutes();
@@ -92,10 +127,11 @@ const CredByrCvLnStts = (props:ChmCvLnSttusRec) => {
                    </Text>
           
           <Text style={styles.prodInfo}><Text style={styles.label}>Loan ID:</Text> {loanID}</Text>
-            <Text style={styles.prodInfo}><Text style={styles.label}>Cash Price:</Text> KES {amountSold.toFixed(2)}</Text>
-            <Text style={styles.prodInfo}><Text style={styles.label}>Credit Sale Price:</Text> KES {amountexpectedBack.toFixed(2)}</Text>
-            <Text style={styles.prodInfo}><Text style={styles.label}>Amount Repaid:</Text> KES {amountRepaid.toFixed(2)}</Text>
-            <Text style={styles.prodInfo}><Text style={styles.label}>Loan Balance with Penalties:</Text> KES {LonBal1.toFixed(2)}</Text>
+            <Text style={styles.prodInfo}><Text style={styles.label}>Cash Price:</Text> {formatAmountSync(Math.floor(amountSold), userCode, ratesMap)}</Text>
+            <Text style={styles.prodInfo}><Text style={styles.label}>Credit Sale Price:</Text> {formatAmountSync(Math.floor(amountexpectedBack), userCode, ratesMap)}</Text>
+            <Text style={styles.prodInfo}><Text style={styles.label}>Amount Repaid:</Text> {formatAmountSync((amountRepaid), userCode, ratesMap)}</Text>
+            <Text style={styles.prodInfo}><Text style={styles.label}>Loan Balance with Penalties:</Text> {formatAmountSync(Math.floor(LonBal1), userCode, ratesMap)}</Text>
+            
             <Text style={styles.prodInfo}><Text style={styles.label}>Repayment Period in days:</Text> {repaymentPeriod}</Text>
             <Text style={styles.prodInfo}><Text style={styles.label}>Seller Contact:</Text> {sellerContact}</Text>
              <Text style={styles.prodInfo}><Text style={styles.label}>Advocate Registration Number:</Text> {advregnu}</Text>
